@@ -4,6 +4,8 @@ import scala.math.round
 import com.codahale.logula.Logging
 import org.jboss.netty.channel.{ExceptionEvent, MessageEvent, ChannelHandlerContext, SimpleChannelUpstreamHandler}
 import com.yammer.metrics.core.MetricName
+import java.net.SocketAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.Metrics
 import util.matching.Regex
@@ -22,9 +24,20 @@ class MetricsServiceHandler
 
   val MetricMatcher = new Regex("""([^:]+)(:((-?\d+|delete)?(\|((\w+)(\|@(\d+\.\d+))?)?)?)?)?""")
 
+  val fragmentCache = new ConcurrentHashMap[SocketAddress, String]();
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
-    val msg = e.getMessage.asInstanceOf[String]
-
+    var msg = e.getMessage.asInstanceOf[String]    
+    val fragment = fragmentCache.remove(e.getRemoteAddress)
+    if (fragment != null) {
+      msg = fragment + msg
+    }    
+    if (!msg.endsWith("\n")) {
+        // Fragmented 
+        val lastIndexOfNewLine = msg.lastIndexOf('\n')
+        fragmentCache.put(e.getRemoteAddress, msg.substring(lastIndexOfNewLine + 1));
+        msg = msg.substring(0, lastIndexOfNewLine)      
+    }
+    
     log.trace("Received message: %s", msg)
 
     msg.trim.split("\n").foreach {
