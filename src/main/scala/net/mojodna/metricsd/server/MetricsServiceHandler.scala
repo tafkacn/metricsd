@@ -107,7 +107,7 @@ class MetricsServiceHandler
 
             case METER_METRIC_TYPE =>
               log.debug("Marking meter '%s'", metricName)
-              Metrics.newMeter(new MetricName("metrics", "meter", metricName), "samples", TimeUnit.SECONDS).mark()
+              Metrics.newMeter(new MetricName("metrics", "meter", metricName), "samples", TimeUnit.SECONDS).mark(value)
 
             case x: String =>
               log.error("Unknown metric type: %s", x)
