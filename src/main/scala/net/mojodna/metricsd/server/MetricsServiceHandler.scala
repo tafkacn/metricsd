@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.Metrics
 import util.matching.Regex
+import com.google.common.cache.CacheBuilder
 
 /**
  * A service handler for :-delimited metrics strings (à la Etsy's statsd).
@@ -24,17 +25,23 @@ class MetricsServiceHandler
 
   val MetricMatcher = new Regex("""([^:]+)(:((-?\d+|delete)?(\|((\w+)(\|@(\d+\.\d+))?)?)?)?)?""")
 
-  val fragmentCache = new ConcurrentHashMap[SocketAddress, String]();
+  val fragmentCache = CacheBuilder.newBuilder()
+    .maximumSize(Long.MaxValue)
+    .expireAfterAccess(30, TimeUnit.SECONDS)
+    .concurrencyLevel(4)
+    .build[SocketAddress, String]()
+        
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     var msg = e.getMessage.asInstanceOf[String]    
-    val fragment = fragmentCache.remove(e.getRemoteAddress)
+    val fragment = fragmentCache.getIfPresent(e.getRemoteAddress)
     if (fragment != null) {
-      msg = fragment + msg
+      fragmentCache.invalidate(e.getRemoteAddress)
+      msg = fragment + msg      
     }    
     if (!msg.endsWith("\n")) {
         // Fragmented 
         val lastIndexOfNewLine = msg.lastIndexOf('\n')
-        fragmentCache.put(e.getRemoteAddress, msg.substring(lastIndexOfNewLine + 1));
+        fragmentCache.put(e.getRemoteAddress, msg.substring(lastIndexOfNewLine + 1));        
         msg = msg.substring(0, lastIndexOfNewLine)      
     }
     
