@@ -5,7 +5,6 @@ import com.codahale.logula.Logging
 import org.jboss.netty.channel.{ExceptionEvent, MessageEvent, ChannelHandlerContext, SimpleChannelUpstreamHandler}
 import com.yammer.metrics.core.MetricName
 import java.net.SocketAddress
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.Metrics
 import util.matching.Regex
