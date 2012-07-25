@@ -2,17 +2,19 @@ package net.mojodna.metricsd.server
 
 import scala.math.round
 import com.codahale.logula.Logging
-import org.jboss.netty.channel.{ExceptionEvent, MessageEvent, ChannelHandlerContext, SimpleChannelUpstreamHandler}
+import org.jboss.netty.channel.{ExceptionEvent, MessageEvent, ChannelHandlerContext, SimpleChannelUpstreamHandler, ChannelLocal}
 import com.yammer.metrics.core.MetricName
-import java.net.SocketAddress
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.Metrics
 import util.matching.Regex
-import com.google.common.cache.CacheBuilder
 
 /**
  * A service handler for :-delimited metrics strings (à la Etsy's statsd).
  */
+object MetricsServiceHandler {
+  private val lastFragment = new ChannelLocal[String];
+}
+
 class MetricsServiceHandler
   extends SimpleChannelUpstreamHandler with Logging {
 
@@ -26,7 +28,17 @@ class MetricsServiceHandler
         
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     var msg = e.getMessage.asInstanceOf[String]    
-    
+    var fragment = MetricsServiceHandler.lastFragment.get(ctx.getChannel)
+    if (fragment != null) {
+      msg = fragment + msg
+    }
+    fragment = null
+    if (!msg.endsWith("\n")) {
+        val lastIndexOfNewLine = msg.lastIndexOf('\n')
+        fragment = msg.substring(lastIndexOfNewLine + 1);
+        msg = msg.substring(0, lastIndexOfNewLine);
+    }
+    MetricsServiceHandler.lastFragment.set(ctx.getChannel, fragment)
     log.trace("Received message: %s", msg)
 
     msg.trim.split("\n").foreach {
