@@ -38,7 +38,7 @@ class MetricsServer(port: Int) extends Logging {
         def getPipeline: ChannelPipeline = {
           Channels.pipeline(
             new StringEncoder(CharsetUtil.UTF_8),
-            new DelimiterBasedFrameDecoder(65536, Delimiters.lineDelimiter():_*),
+            new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter():_*),
             new StringDecoder(CharsetUtil.UTF_8),
             h
           )
