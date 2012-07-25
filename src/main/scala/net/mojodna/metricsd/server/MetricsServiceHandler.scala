@@ -23,26 +23,9 @@ class MetricsServiceHandler
   val TIMER_METRIC_TYPE = "ms"
 
   val MetricMatcher = new Regex("""([^:]+)(:((-?\d+|delete)?(\|((\w+)(\|@(\d+\.\d+))?)?)?)?)?""")
-
-  val fragmentCache = CacheBuilder.newBuilder()
-    .maximumSize(Long.MaxValue)
-    .expireAfterAccess(30, TimeUnit.SECONDS)
-    .concurrencyLevel(4)
-    .build[SocketAddress, String]()
         
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     var msg = e.getMessage.asInstanceOf[String]    
-    val fragment = fragmentCache.getIfPresent(e.getRemoteAddress)
-    if (fragment != null) {
-      fragmentCache.invalidate(e.getRemoteAddress)
-      msg = fragment + msg      
-    }    
-    if (!msg.endsWith("\n")) {
-        // Fragmented 
-        val lastIndexOfNewLine = msg.lastIndexOf('\n')
-        fragmentCache.put(e.getRemoteAddress, msg.substring(lastIndexOfNewLine + 1));        
-        msg = msg.substring(0, lastIndexOfNewLine)      
-    }
     
     log.trace("Received message: %s", msg)
 

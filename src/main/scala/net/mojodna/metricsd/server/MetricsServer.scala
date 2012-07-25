@@ -5,6 +5,7 @@ import java.util.concurrent.Executors
 import org.jboss.netty.bootstrap.{ConnectionlessBootstrap, ServerBootstrap}
 import org.jboss.netty.util.CharsetUtil
 import org.jboss.netty.handler.codec.string.{StringDecoder, StringEncoder}
+import org.jboss.netty.handler.codec.frame.{DelimiterBasedFrameDecoder, Delimiters}
 import org.jboss.netty.channel.{FixedReceiveBufferSizePredictorFactory, Channels, ChannelPipeline, ChannelPipelineFactory}
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import com.codahale.logula.Logging
@@ -37,6 +38,7 @@ class MetricsServer(port: Int) extends Logging {
         def getPipeline: ChannelPipeline = {
           Channels.pipeline(
             new StringEncoder(CharsetUtil.UTF_8),
+            new DelimiterBasedFrameDecoder(65536, Delimiters.lineDelimiter():_*),
             new StringDecoder(CharsetUtil.UTF_8),
             h
           )
