@@ -1,6 +1,6 @@
 package net.mojodna.metricsd.server
 
-import scala.math.round
+import scala.math.{round, max}
 import com.codahale.logula.Logging
 import org.jboss.netty.channel.{ExceptionEvent, MessageEvent, ChannelHandlerContext, SimpleChannelUpstreamHandler, ChannelLocal}
 import com.yammer.metrics.core.MetricName
@@ -35,8 +35,14 @@ class MetricsServiceHandler
     fragment = null
     if (!msg.endsWith("\n")) {
         val lastIndexOfNewLine = msg.lastIndexOf('\n')
-        fragment = msg.substring(lastIndexOfNewLine + 1);
-        msg = msg.substring(0, lastIndexOfNewLine);
+        fragment = msg.substring(lastIndexOfNewLine + 1)
+        if (lastIndexOfNewLine > 0) {
+          msg = msg.substring(0, lastIndexOfNewLine)
+        }
+        else {
+          MetricsServiceHandler.lastFragment.set(ctx.getChannel, fragment)
+          return
+        }
     }
     MetricsServiceHandler.lastFragment.set(ctx.getChannel, fragment)
     log.trace("Received message: %s", msg)
